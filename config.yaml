@@ -1,0 +1,146 @@
+# FireSight Configuration File
+
+# Data Sources
+data_sources:
+  nasa_firms:
+    base_url: "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
+    api_key: "${NASA_FIRMS_API_KEY}"
+    default_region: "north_america"
+  
+  openmeteo:
+    base_url: "https://archive-api.open-meteo.com/v1/archive"
+    default_timezone: "America/Los_Angeles"
+
+# Data Collection Settings
+data_collection:
+  start_date: "2018-01-01"
+  end_date: "2023-12-31"
+  target_regions:
+    - name: "Bay Area"
+      bounds: [37.0, -123.0, 38.5, -121.5]
+      counties: ["San Francisco", "Alameda", "Contra Costa", "San Mateo", "Santa Clara"]
+  
+  weather_features:
+    - temperature_2m_max
+    - temperature_2m_min
+    - relative_humidity_2m_max
+    - relative_humidity_2m_min
+    - precipitation_sum
+    - wind_speed_10m_max
+    - wind_direction_10m_dominant
+    - surface_pressure
+    - evapotranspiration
+
+# Feature Engineering
+feature_engineering:
+  temporal_features:
+    - day_of_year
+    - month
+    - season
+    - is_weekend
+  
+  rolling_windows: [3, 7, 14, 30]  # days
+  lag_features: [1, 2, 3, 7]  # days
+  
+  fire_risk_factors:
+    - temperature_anomaly
+    - humidity_deficit
+    - wind_dryness_index
+    - precipitation_deficit
+
+# Model Configuration
+models:
+  classification:
+    target_column: "wildfire_occurred"
+    positive_class: 1
+    negative_class: 0
+    
+    algorithms:
+      logistic_regression:
+        C: 1.0
+        max_iter: 1000
+        
+      random_forest:
+        n_estimators: 100
+        max_depth: 10
+        min_samples_split: 5
+        min_samples_leaf: 2
+        
+      xgboost:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        subsample: 0.8
+        
+      adaboost:
+        n_estimators: 50
+        learning_rate: 1.0
+        
+      tabnet:
+        optimizer_fn: "torch.optim.Adam"
+        optimizer_params: {"lr": 2e-2}
+        scheduler_params: {"step_size": 50, "gamma": 0.9}
+        scheduler_fn: "torch.optim.lr_scheduler.StepLR"
+        mask_type: "entmax"
+  
+  regression:
+    target_column: "fire_severity"
+    
+    algorithms:
+      linear_regression:
+        fit_intercept: true
+        
+      svr:
+        kernel: "rbf"
+        C: 1.0
+        gamma: "scale"
+        
+      random_forest_regressor:
+        n_estimators: 100
+        max_depth: 10
+        
+      xgboost_regressor:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+
+# Evaluation Settings
+evaluation:
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
+  
+  classification_metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - roc_auc
+    - confusion_matrix
+  
+  regression_metrics:
+    - r2_score
+    - mean_absolute_error
+    - mean_squared_error
+    - root_mean_squared_error
+
+# File Paths
+paths:
+  data_dir: "data"
+  models_dir: "models"
+  notebooks_dir: "notebooks"
+  results_dir: "results"
+  
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  features_data: "data/features"
+  
+  model_files:
+    classification: "models/classification"
+    regression: "models/regression"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/firesight.log" 
